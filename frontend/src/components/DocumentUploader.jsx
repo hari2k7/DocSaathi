@@ -1,16 +1,35 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Camera, Image as ImageIcon, Sparkles, CheckCircle, Zap } from 'lucide-react';
+import { Upload, FileText, Camera, Image as ImageIcon, Sparkles, CheckCircle, Zap, Loader2 } from 'lucide-react';
 import { SAMPLE_DOCUMENTS } from './SampleDocs';
+import { renderPdfFirstPage } from '../services/pdf';
 
 export default function DocumentUploader({ selectedImage, onSelectImage, onAnalyze, isAnalyzing }) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedSampleId, setSelectedSampleId] = useState(null);
+  const [isConvertingPdf, setIsConvertingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (file) => {
+  const handleFileChange = async (file) => {
     if (!file) return;
+
+    // Handle PDF files
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        setIsConvertingPdf(true);
+        const pageImage = await renderPdfFirstPage(file);
+        onSelectImage(pageImage);
+        setSelectedSampleId(null);
+      } catch (err) {
+        alert('Could not read PDF: ' + (err.message || 'Please upload a valid PDF or image.'));
+      } finally {
+        setIsConvertingPdf(false);
+      }
+      return;
+    }
+
+    // Handle standard images
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (PNG, JPG, WEBP).');
+      alert('Please upload an image file (PNG, JPG, WEBP) or a PDF document.');
       return;
     }
     const reader = new FileReader();
@@ -86,7 +105,7 @@ export default function DocumentUploader({ selectedImage, onSelectImage, onAnaly
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf,.pdf"
             style={{ display: 'none' }}
             onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
           />
@@ -101,13 +120,13 @@ export default function DocumentUploader({ selectedImage, onSelectImage, onAnaly
             marginBottom: '1rem',
             color: 'var(--accent-primary)'
           }}>
-            <ImageIcon size={26} />
+            {isConvertingPdf ? <Loader2 size={26} className="spin" /> : <ImageIcon size={26} />}
           </div>
           <p style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.35rem' }}>
-            Drop your document image here or <span style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>browse</span>
+            {isConvertingPdf ? 'Rendering PDF page 1...' : <>Drop document (Image or PDF) here or <span style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>browse</span></>}
           </p>
           <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-            Supports PNG, JPG, WEBP &amp; scanned paper photos
+            Supports PDF, PNG, JPG, WEBP &amp; scanned paper photos
           </p>
         </div>
 

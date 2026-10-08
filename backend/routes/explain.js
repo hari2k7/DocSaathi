@@ -11,7 +11,7 @@ const MAX_TRANSCRIPTION_CHARS = 20000;
 function buildFactsForModel(facts, verification) {
   if (!facts) return {};
   const vDue = verification?.due_date || {};
-  return {
+  const res = {
     doc_type: facts.doc_type,
     sender: facts.sender,
     amount_due_inr: facts.amount_due?.value,
@@ -23,6 +23,10 @@ function buildFactsForModel(facts, verification) {
     reference_ids: (facts.ids || []).map(i => `${i.label}: ${i.value}`),
     needs_paper_check: verification?.needs_paper_check || false
   };
+  if (facts.summary_en) {
+    res.summary_en = facts.summary_en;
+  }
+  return res;
 }
 
 router.post('/', async (req, res) => {
@@ -47,7 +51,12 @@ router.post('/', async (req, res) => {
     if (!facts || typeof facts !== 'object' || !verification || typeof verification !== 'object') {
       return res.status(400).json({ error: 'bad_request' });
     }
-    userContent = JSON.stringify(buildFactsForModel(facts, verification));
+    const minimalFacts = buildFactsForModel(facts, verification);
+    if (typeof transcription === 'string' && transcription.trim()) {
+      userContent = `Document Facts:\n${JSON.stringify(minimalFacts, null, 2)}\n\nDocument Transcription:\n${transcription.slice(0, 4000)}`;
+    } else {
+      userContent = JSON.stringify(minimalFacts);
+    }
   }
 
   const sse = openSSE(res);

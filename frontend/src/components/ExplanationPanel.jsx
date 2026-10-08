@@ -21,17 +21,151 @@ const MODES = [
   { id: 'translate', label: 'Translate', desc: 'Verbatim text translation' }
 ];
 
-const normalizeLang = (lang) => (lang || '').toLowerCase().replace('_', '-');
+const normalizeLang = (lang) => (lang || '').toLowerCase().replace(/_/g, '-');
 
-// Pick an installed voice for the language. Setting utterance.lang alone is only a
-// hint: browsers fall back to their default (English/Hindi) voice, so we choose explicitly.
-const findVoiceForLang = (voices, speechLang) => {
+// Pick an installed voice for the language. Matches by code or name.
+const findVoiceForLang = (voices, speechLang, langName = '') => {
   const target = normalizeLang(speechLang);
   const base = target.split('-')[0];
   const exact = voices.filter((v) => normalizeLang(v.lang) === target);
+  if (exact.length) return exact[0];
   const sameLanguage = voices.filter((v) => normalizeLang(v.lang).split('-')[0] === base);
-  return exact[0] || sameLanguage[0] || null;
+  if (sameLanguage.length) return sameLanguage[0];
+  if (langName) {
+    const byName = voices.filter((v) =>
+      v.name.toLowerCase().includes(langName.toLowerCase()) ||
+      normalizeLang(v.lang).includes(base)
+    );
+    if (byName.length) return byName[0];
+  }
+  return null;
 };
+
+function renderInlineFormatting(str) {
+  if (!str) return null;
+  const parts = str.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return (
+        <strong key={i} style={{ color: '#ffffff', fontWeight: '700' }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
+function FormattedExplanation({ text, isStreaming, selectedLang }) {
+  if (!text && isStreaming) {
+    return (
+      <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', padding: '1rem 0' }}>
+        Streaming response in {selectedLang}...
+      </div>
+    );
+  }
+
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const elements = [];
+  let currentList = [];
+
+  const flushList = (keyPrefix) => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`${keyPrefix}-list`} style={{ margin: '0.65rem 0 1.15rem 0', paddingLeft: 0, listStyle: 'none' }}>
+          {currentList.map((item, idx) => (
+            <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.5rem', lineHeight: '1.65' }}>
+              <span style={{ color: '#34d399', fontSize: '1.15rem', lineHeight: '1.2', flexShrink: 0 }}>•</span>
+              <div style={{ color: '#f1f5f9' }}>{renderInlineFormatting(item)}</div>
+            </li>
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList(index);
+      return;
+    }
+
+    if (trimmed.startsWith('### ') || trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+      flushList(index);
+      const title = trimmed.replace(/^#+\s*/, '');
+      elements.push(
+        <div key={index} style={{
+          marginTop: index === 0 ? '0' : '1.5rem',
+          marginBottom: '0.85rem',
+          paddingBottom: '0.45rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <h4 style={{
+            fontSize: '1.15rem',
+            fontWeight: '700',
+            color: '#93c5fd',
+            letterSpacing: '-0.01em',
+            margin: 0
+          }}>
+            {title}
+          </h4>
+        </div>
+      );
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      currentList.push(trimmed.replace(/^[-*]\s+/, ''));
+    } else if (trimmed.startsWith('⚠️') || trimmed.toLowerCase().startsWith('warning') || trimmed.toLowerCase().startsWith('caution:')) {
+      flushList(index);
+      elements.push(
+        <div key={index} style={{
+          background: 'rgba(245, 158, 11, 0.12)',
+          borderLeft: '4px solid #f59e0b',
+          borderRadius: 'var(--radius-sm)',
+          padding: '0.85rem 1.15rem',
+          margin: '1rem 0',
+          color: '#fef3c7',
+          fontSize: '0.95rem',
+          lineHeight: '1.65'
+        }}>
+          {renderInlineFormatting(trimmed)}
+        </div>
+      );
+    } else {
+      flushList(index);
+      elements.push(
+        <p key={index} style={{ marginBottom: '0.85rem', lineHeight: '1.7', color: '#f1f5f9' }}>
+          {renderInlineFormatting(trimmed)}
+        </p>
+      );
+    }
+  });
+
+  flushList('end');
+
+  return (
+    <div style={{ fontSize: '0.975rem' }}>
+      {elements}
+      {isStreaming && (
+        <span style={{
+          display: 'inline-block',
+          width: '8px',
+          height: '18px',
+          background: '#8b5cf6',
+          marginLeft: '4px',
+          borderRadius: '2px',
+          verticalAlign: 'middle',
+          animation: 'pulse-glow 0.8s infinite'
+        }} />
+      )}
+    </div>
+  );
+}
 
 export default function ExplanationPanel({ verifiedFacts }) {
   const [selectedLang, setSelectedLang] = useState('Tamil');
@@ -136,23 +270,28 @@ export default function ExplanationPanel({ verifiedFacts }) {
     const targetCode = langObj ? langObj.speechLang : 'en-IN';
 
     const voices = synthRef.current.getVoices();
-    const voice = findVoiceForLang(voices.length ? voices : voicesRef.current, targetCode);
+    const voice = findVoiceForLang(voices.length ? voices : voicesRef.current, targetCode, selectedLang);
 
-    if (!voice) {
+    if (voice) {
+      setVoiceNotice(null);
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      // Fallback: ask browser to synthesize using target language code directly
+      utterance.lang = targetCode;
       setVoiceNotice(
-        `No ${selectedLang} voice is installed on this browser/device, so the audio can't be read in ${selectedLang}. ` +
-        `Try Microsoft Edge, or install the ${selectedLang} voice in your system speech settings.`
+        `Note: Using browser speech fallback. For the best natural ${selectedLang} accent, open in Microsoft Edge or install the ${selectedLang} voice pack in Windows Settings.`
       );
-      return;
     }
 
-    setVoiceNotice(null);
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
     utterance.rate = 0.92;
-
     utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onerror = (e) => {
+      setIsSpeaking(false);
+      setVoiceNotice(
+        `Could not play ${selectedLang} audio. Please open this app in Microsoft Edge (built-in Tamil/Hindi voices) or install the ${selectedLang} voice in Windows Settings.`
+      );
+    };
 
     setIsSpeaking(true);
     synthRef.current.speak(utterance);
@@ -258,29 +397,14 @@ export default function ExplanationPanel({ verifiedFacts }) {
           </div>
         ) : (
           <div style={{
-            fontSize: '1rem',
-            lineHeight: '1.7',
-            whiteSpace: 'pre-wrap',
             color: '#f8fafc',
             fontFamily: selectedLang === 'English' ? 'inherit' : 'sans-serif'
           }}>
-            {streamedText}
-            {isStreaming && (
-              <span style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '18px',
-                background: '#8b5cf6',
-                marginLeft: '4px',
-                borderRadius: '2px',
-                animation: 'pulse-glow 0.8s infinite'
-              }} />
-            )}
-            {!streamedText && isStreaming && (
-              <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Streaming response in {selectedLang}...
-              </span>
-            )}
+            <FormattedExplanation
+              text={streamedText}
+              isStreaming={isStreaming}
+              selectedLang={selectedLang}
+            />
           </div>
         )}
 
