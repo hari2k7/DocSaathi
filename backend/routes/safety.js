@@ -8,7 +8,7 @@ const { locate } = require('../verify');
 const router = express.Router();
 
 router.post('/redact', (req, res) => {
-  const { text } = req.body;
+  const { text } = req.body || {};
   if (!text || typeof text !== 'string') return res.status(400).json({ error: 'bad_request' });
   const spans = findPII(text);
   res.json({ spans });
@@ -16,7 +16,7 @@ router.post('/redact', (req, res) => {
 
 router.post('/scam-check', async (req, res, next) => {
   try {
-    const { transcription } = req.body;
+    const { transcription } = req.body || {};
     if (!transcription || typeof transcription !== 'string') {
       return res.status(400).json({ error: 'bad_request' });
     }

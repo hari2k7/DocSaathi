@@ -48,15 +48,18 @@ function findPII(text) {
 function scamRuleHits(text) {
   if (!text) return [];
   const hits = [];
+  // Whole-word matching only: "pin" must not fire inside "shipping" or "spinning".
+  // "PIN code" is the postal code on every Indian address, not a request for a secret PIN.
   const lower = text.toLowerCase();
-  
-  if (/(otp|pin|cvv|password)/.test(lower)) hits.push('requests_credential');
-  if (/(upi|gpay|paytm|phonepe)/.test(lower)) hits.push('mentions_upi');
-  if (/(urgent|immediate|blocked|suspend|within 24 hours)/.test(lower)) hits.push('urgency');
-  if (/(kyc).*(expir|block|suspend|update)/.test(lower)) hits.push('kyc_pressure');
-  if (/(bit\.ly|tinyurl|t\.co|goo\.gl)/.test(lower)) hits.push('short_link');
-  if (/(lottery|prize|winner|won|claim your reward)/.test(lower)) hits.push('lottery');
-  if (/(http|www\.)/.test(lower) && !hits.includes('short_link')) hits.push('contains_link');
+  const scanned = lower.replace(/\bpin[\s-]*code\b/g, ' ');
+
+  if (/\b(otp|pin|cvv|password)\b/.test(scanned)) hits.push('requests_credential');
+  if (/\b(upi|gpay|paytm|phonepe)\b/.test(scanned)) hits.push('mentions_upi');
+  if (/\b(urgent|immediate|immediately|blocked?|suspend(ed)?|within 24 hours)\b/.test(scanned)) hits.push('urgency');
+  if (/\bkyc\b.*(expir|block|suspend|update)/.test(scanned)) hits.push('kyc_pressure');
+  if (/\b(bit\.ly|tinyurl|t\.co|goo\.gl)\b/.test(scanned)) hits.push('short_link');
+  if (/\b(lottery|prize|winner|won|claim your reward)\b/.test(scanned)) hits.push('lottery');
+  if (/(https?:\/\/|www\.)/.test(scanned) && !hits.includes('short_link')) hits.push('contains_link');
 
   return hits;
 }

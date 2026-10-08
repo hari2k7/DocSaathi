@@ -5,7 +5,7 @@ const { buildICS } = require('../ics');
 const router = express.Router();
 
 router.post('/', (req, res) => {
-  const { title, due_date, notes } = req.body;
+  const { title, due_date, notes } = req.body || {};
   if (!title || typeof title !== 'string' || title.length === 0) {
     return res.status(400).json({ error: 'invalid_title' });
   }

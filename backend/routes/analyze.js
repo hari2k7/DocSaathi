@@ -7,8 +7,10 @@ const { verifyFacts } = require('../verify');
 
 const router = express.Router();
 
+const DATA_URL_PREFIX = /^data:([\w.+-]+\/[\w.+-]+);base64,/i;
+
 function cleanBase64(str) {
-  return str.replace(/^data:image\/\w+;base64,/, '').trim();
+  return str.replace(DATA_URL_PREFIX, '').trim();
 }
 
 function parseModelJson(content) {
@@ -45,13 +47,23 @@ async function tryOllamaAnalyze(base64Image, useFormat) {
   
   const content = await chat({ messages, format, timeoutMs: 180000 });
   if (!content) throw new Error('Empty response from model');
-  return parseModelJson(content);
+  const parsed = parseModelJson(content);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Model JSON was not an object');
+  }
+  return parsed;
 }
 
 router.post('/', async (req, res, next) => {
   try {
-    const { image } = req.body;
+    const { image } = req.body || {};
     if (!image || typeof image !== 'string') {
+      return res.status(400).json({ error: 'invalid_image' });
+    }
+
+    // Vision models read raster images only (an SVG data URL would fail inside Ollama)
+    const dataUrl = image.match(DATA_URL_PREFIX);
+    if (dataUrl && !/^image\/(png|jpe?g|webp|gif|bmp)$/i.test(dataUrl[1])) {
       return res.status(400).json({ error: 'invalid_image' });
     }
 

@@ -40,3 +40,20 @@ test('scamRuleHits', async (t) => {
     assert.strictEqual(hits.length, 0);
   });
 });
+
+test('scamRuleHits avoids false positives on genuine bills', async (t) => {
+  await t.test('PIN code on an address is not a credential request', () => {
+    assert.deepStrictEqual(scamRuleHits('Door 42, Gandhipuram, Coimbatore - PIN code 641012'), []);
+    assert.deepStrictEqual(scamRuleHits('Pincode: 641012'), []);
+  });
+  await t.test('words that merely contain a keyword do not fire', () => {
+    assert.deepStrictEqual(scamRuleHits('Free shipping, spinning mills, wonderful opinion'), []);
+  });
+  await t.test('a real request for a PIN still fires', () => {
+    assert.ok(scamRuleHits('Please share your ATM PIN to continue').includes('requests_credential'));
+  });
+  await t.test('t.co only matches the short link, not ordinary domains', () => {
+    assert.ok(!scamRuleHits('visit https://www.net.com/pay').includes('short_link'));
+    assert.ok(scamRuleHits('click https://t.co/abc123').includes('short_link'));
+  });
+});
