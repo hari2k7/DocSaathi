@@ -11,8 +11,8 @@ app.use(cors({
   origin: [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
 }));
 
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ limit: '15mb', extended: true }));
+app.use(express.json({ limit: '11mb' }));
+app.use(express.urlencoded({ limit: '11mb', extended: true }));
 
 app.use('/api/analyze', analyzeRoute);
 app.use('/api/reminder', reminderRoute);
@@ -31,8 +31,16 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'bad_json' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'payload_too_large' });
+  }
+
   const code = err.code || 'internal_error';
   const status = err.status || 500;
+  // Log message only, no stack traces
   console.error(`[Error] ${code}: ${err.message}`);
   res.status(status).json({ error: code });
 });
