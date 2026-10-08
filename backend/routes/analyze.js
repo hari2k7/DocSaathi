@@ -85,7 +85,7 @@ router.post('/', async (req, res, next) => {
 
     const facts = parsedResult;
     const verification = verifyFacts(facts);
-    res.json({ facts, verification });
+    res.json({ success: true, facts, verification });
   } catch (err) {
     next(err);
   }
