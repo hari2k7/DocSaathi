@@ -13,8 +13,6 @@
 | Nithin Sai | First Ollama and backend connection, and port configuration |
 | Shivaditya S S | Frontend–backend integration (API contract, streaming, language codes, port), nine languages and three modes, audio-reader voice selection, fixes to the scam check, calendar export and image handling, documentation, and the project README |
 
-> Vision & Safety (sample documents, redaction and scam rules, accuracy report): [Name, or merge into the rows above if one person covered it].
-
 ## Problem Statement
 
 ### The Problem
