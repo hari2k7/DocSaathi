@@ -69,11 +69,13 @@ router.post('/', async (req, res, next) => {
 
     let parsedResult;
     try {
+      // First attempt with structured output
       parsedResult = await tryOllamaAnalyze(cleanImg, true);
     } catch (err) {
+      // Retry once without strict format in case model choked on image + format
       if (err instanceof OllamaError) throw err;
       try {
-        parsedResult = await tryOllamaAnalyze(cleanImg, true); // Same retry for step 3
+        parsedResult = await tryOllamaAnalyze(cleanImg, false);
       } catch (retryErr) {
         if (retryErr instanceof OllamaError) throw retryErr;
         return res.status(502).json({ error: 'model_returned_invalid_json' });
