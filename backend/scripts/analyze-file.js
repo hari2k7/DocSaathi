@@ -26,7 +26,7 @@ fetch('http://127.0.0.1:3001/api/analyze', {
   console.log(`Time elapsed: ${elapsed}s`);
   console.log(`Status: ${res.status}`);
   const json = await res.json();
-  console.log(JSON.stringify(json, null, 2));
+  console.log('Success: received facts and transcription.');
 })
 .catch(err => {
   console.error('Error:', err.message);
