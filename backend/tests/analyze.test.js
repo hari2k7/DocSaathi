@@ -59,5 +59,53 @@ test('analyze failure rehearsal', async (t) => {
     assert.strictEqual(body.error, 'bad_json');
   });
 
+  // 5. Success (Mocked Ollama)
+  await t.test('success response structure', async () => {
+    const mockOllama = require('express')();
+    mockOllama.post('/api/chat', (req, res) => {
+      res.json({
+        message: {
+          content: JSON.stringify({
+            transcription: 'Mock text',
+            doc_type: 'other',
+            sender: 'Me',
+            document_language: 'en',
+            summary_en: 'Mock summary',
+            amount_due: { value: 10, source_text: '10' },
+            due_date: { value: '2026-10-15', source_text: 'Oct 15' },
+            ids: [],
+            required_actions: [],
+            penalties: [],
+            unclear_parts: [],
+            confidence: 0.99
+          })
+        }
+      });
+    });
+    const ollamaServer = require('http').createServer(mockOllama);
+    await new Promise(resolve => ollamaServer.listen(0, resolve));
+    const ollamaPort = ollamaServer.address().port;
+    
+    const originalHost = config.ollamaHost;
+    config.ollamaHost = `http://127.0.0.1:${ollamaPort}`;
+
+    const res = await fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: 'YWJjZGU=' }) // valid looking base64
+    });
+    
+    config.ollamaHost = originalHost;
+    ollamaServer.close();
+    
+    assert.strictEqual(res.status, 200);
+    const body = await res.json();
+    assert.strictEqual(body.success, true);
+    assert.ok('facts' in body);
+    assert.ok('verification' in body);
+    assert.strictEqual(body.transcription, 'Mock text');
+    assert.ok(!('transcription' in body.facts));
+  });
+
   server.close();
 });
