@@ -1,50 +1,50 @@
 const express = require('express');
 const { chatStream } = require('../ollama');
 const { askSystem } = require('../prompts');
+const { languageName } = require('../config');
 const { extractSourceQuote, locate } = require('../verify');
+const { openSSE } = require('../sse');
 
 const router = express.Router();
 
-router.post('/', async (req, res, next) => {
-  const { transcription, facts, question, language, history } = req.body;
+router.post('/', async (req, res) => {
+  const { transcription, facts, question, language, history } = req.body || {};
   if (!transcription || typeof transcription !== 'string') return res.status(400).json({ error: 'bad_request' });
   if (!question || typeof question !== 'string') return res.status(400).json({ error: 'bad_request' });
-  if (!['ta', 'hi', 'en'].includes(language)) return res.status(400).json({ error: 'bad_request' });
+  const langName = languageName(language);
+  if (!langName) return res.status(400).json({ error: 'bad_request' });
 
   let safeHistory = [];
   if (Array.isArray(history)) {
     safeHistory = history
-      .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
       .slice(-6);
   }
 
   const cleanQuestion = question.trim().substring(0, 1000);
+  if (!cleanQuestion) return res.status(400).json({ error: 'bad_request' });
 
-  const { openSSE } = require('../sse');
   const sse = openSSE(res);
-
-  const controller = new AbortController();
-  req.on('close', () => controller.abort());
 
   const contextStr = `TRANSCRIPTION (authoritative):\n${transcription}\n\nFACTS (possibly wrong):\n${JSON.stringify(facts || {})}`;
   const messages = [
-    { role: 'system', content: askSystem(language) },
+    { role: 'system', content: askSystem(langName) },
     { role: 'user', content: contextStr },
-    ...safeHistory,
+    ...safeHistory.map(m => ({ role: m.role, content: m.content })),
     { role: 'user', content: cleanQuestion }
   ];
 
   try {
-    const stream = chatStream({ messages, timeoutMs: 120000 });
+    const stream = chatStream({ messages, timeoutMs: 120000, signal: sse.signal });
     let fullAnswer = '';
 
     for await (const chunk of stream) {
-      if (controller.signal.aborted) break;
+      if (sse.signal.aborted) break;
       fullAnswer += chunk;
       sse.send('token', chunk);
     }
 
-    if (!controller.signal.aborted) {
+    if (!sse.signal.aborted) {
       const { quote } = extractSourceQuote(fullAnswer);
       let span = null;
       let verified = false;
@@ -62,7 +62,7 @@ router.post('/', async (req, res, next) => {
       sse.end();
     }
   } catch (err) {
-    if (!controller.signal.aborted) {
+    if (!sse.signal.aborted) {
       sse.send('error', err.code || 'internal_error');
       sse.end();
     }

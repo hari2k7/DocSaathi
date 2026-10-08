@@ -24,8 +24,21 @@ const config = {
   languageMap: {
     ta: 'Tamil',
     hi: 'Hindi',
-    en: 'simple English'
+    en: 'simple English',
+    ml: 'Malayalam',
+    te: 'Telugu',
+    kn: 'Kannada',
+    bn: 'Bengali',
+    mr: 'Marathi',
+    gu: 'Gujarati'
   }
 };
 
-module.exports = { validateOllamaHost, config };
+// Returns the language name used in prompts for a code like 'ta', or null if unsupported
+function languageName(code) {
+  return typeof code === 'string' && Object.hasOwn(config.languageMap, code)
+    ? config.languageMap[code]
+    : null;
+}
+
+module.exports = { validateOllamaHost, languageName, config };

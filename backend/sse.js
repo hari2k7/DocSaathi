@@ -6,12 +6,22 @@ function openSSE(res) {
   });
   res.flushHeaders();
 
+  // Aborts when the client goes away before we finished (tab closed, language switched).
+  // Listen on `res`, not `req`: `req` emits 'close' as soon as the request body is read.
+  const controller = new AbortController();
+  res.on('close', () => {
+    if (!res.writableFinished) controller.abort();
+  });
+
+  const canWrite = () => !res.writableEnded && !res.destroyed;
+
   return {
+    signal: controller.signal,
     send(event, data) {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (canWrite()) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     },
     end() {
-      res.end();
+      if (canWrite()) res.end();
     }
   };
 }

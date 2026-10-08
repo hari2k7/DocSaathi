@@ -25,3 +25,18 @@ test('validateOllamaHost rejects LAN addresses', () => {
 test('validateOllamaHost rejects garbage strings', () => {
   assert.throws(() => validateOllamaHost('garbage'), /Invalid OLLAMA_HOST/);
 });
+
+const { languageName } = require('../config');
+
+test('languageName()', async (t) => {
+  await t.test('maps supported codes to prompt names', () => {
+    assert.strictEqual(languageName('ta'), 'Tamil');
+    assert.strictEqual(languageName('en'), 'simple English');
+    assert.strictEqual(languageName('gu'), 'Gujarati');
+  });
+  await t.test('rejects anything else', () => {
+    for (const bad of ['Tamil', 'xx', 'constructor', '__proto__', '', null, undefined, 5]) {
+      assert.strictEqual(languageName(bad), null, String(bad));
+    }
+  });
+});

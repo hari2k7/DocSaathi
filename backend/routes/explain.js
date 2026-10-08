@@ -1,8 +1,12 @@
 const express = require('express');
 const { chatStream } = require('../ollama');
-const { explainSystem } = require('../prompts');
+const { explainSystem, EXPLAIN_MODES } = require('../prompts');
+const { languageName } = require('../config');
+const { openSSE } = require('../sse');
 
 const router = express.Router();
+
+const MAX_TRANSCRIPTION_CHARS = 20000;
 
 function buildFactsForModel(facts, verification) {
   if (!facts) return {};
@@ -21,41 +25,49 @@ function buildFactsForModel(facts, verification) {
   };
 }
 
-router.post('/', async (req, res, next) => {
-  const { language, facts, verification } = req.body;
-  if (!['ta', 'hi', 'en'].includes(language)) {
+router.post('/', async (req, res) => {
+  const { language, facts, verification, transcription, mode = 'explain' } = req.body || {};
+
+  const langName = languageName(language);
+  if (!langName) {
     return res.status(400).json({ error: 'bad_request' });
   }
-  if (!facts || !verification) {
+  if (!EXPLAIN_MODES.includes(mode)) {
     return res.status(400).json({ error: 'bad_request' });
   }
 
-  const { openSSE } = require('../sse');
+  let userContent;
+  if (mode === 'translate') {
+    // Verbatim translation works on the document text itself
+    if (typeof transcription !== 'string' || !transcription.trim() || transcription.length > MAX_TRANSCRIPTION_CHARS) {
+      return res.status(400).json({ error: 'bad_request' });
+    }
+    userContent = transcription;
+  } else {
+    if (!facts || typeof facts !== 'object' || !verification || typeof verification !== 'object') {
+      return res.status(400).json({ error: 'bad_request' });
+    }
+    userContent = JSON.stringify(buildFactsForModel(facts, verification));
+  }
+
   const sse = openSSE(res);
-
-  const controller = new AbortController();
-  req.on('close', () => {
-    controller.abort();
-  });
-
-  const minimalFacts = buildFactsForModel(facts, verification);
   const messages = [
-    { role: 'system', content: explainSystem(language) },
-    { role: 'user', content: JSON.stringify(minimalFacts) }
+    { role: 'system', content: explainSystem(langName, mode) },
+    { role: 'user', content: userContent }
   ];
 
   try {
-    const stream = chatStream({ messages, timeoutMs: 120000 });
+    const stream = chatStream({ messages, timeoutMs: 120000, signal: sse.signal });
     for await (const chunk of stream) {
-      if (controller.signal.aborted) break;
+      if (sse.signal.aborted) break;
       sse.send('token', chunk);
     }
-    if (!controller.signal.aborted) {
+    if (!sse.signal.aborted) {
       sse.send('done', {});
       sse.end();
     }
   } catch (err) {
-    if (!controller.signal.aborted) {
+    if (!sse.signal.aborted) {
       sse.send('error', err.code || 'internal_error');
       sse.end();
     }
