@@ -89,7 +89,7 @@ export default function App() {
           }}>
             <AlertCircle size={22} color="#ef4444" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: '0.875rem' }}>
-              <strong>DocSaathi Backend Server Offline:</strong> Please make sure the backend express server is running on <code>http://localhost:5000</code> by executing <code>cd backend &amp;&amp; npm start</code> in your terminal.
+              <strong>DocSaathi Backend Server Offline:</strong> Please make sure the backend express server is running on <code>http://localhost:3001</code> by executing <code>cd backend &amp;&amp; npm start</code> in your terminal.
             </div>
           </div>
         )}
@@ -136,7 +136,7 @@ export default function App() {
             <ExplanationPanel verifiedFacts={verifiedFacts} />
 
             {/* Pass 3: Grounded Interactive Document Q&A Assistant */}
-            <DocumentChat transcription={verifiedFacts.transcription} />
+            <DocumentChat analysis={verifiedFacts} />
           </>
         )}
 

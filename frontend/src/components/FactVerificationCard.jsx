@@ -18,7 +18,9 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
     required_actions = [],
     penalties = [],
     medical_details,
-    unclear_parts = []
+    unclear_parts = [],
+    needs_paper_check = false,
+    verification_messages = []
   } = verifiedFacts;
 
   // Determine urgency badge for due date
@@ -27,6 +29,14 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
       return (
         <span className="badge badge-info">
           <Calendar size={12} /> Date: N/A
+        </span>
+      );
+    }
+
+    if (due_date.status === 'due_today') {
+      return (
+        <span className="badge badge-danger">
+          <Clock size={12} /> Due Today
         </span>
       );
     }
@@ -80,11 +90,11 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: '700' }}>Pass 1: Verified Document Facts</h3>
               <span className="badge badge-verified" style={{ textTransform: 'capitalize' }}>
-                {doc_type.replace('_', ' ')}
+                {doc_type.replace(/_/g, ' ')}
               </span>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-              Deterministic code verification engine processed in {processingTime || '0.5'}s
+              Facts extracted by the vision model, then checked by the code verification engine{processingTime ? ` (${processingTime}s)` : ''}
             </p>
           </div>
         </div>
@@ -114,9 +124,10 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
               <Building2 size={14} color="var(--accent-primary)" />
               SENDER / ISSUER
             </span>
-            {sender?.is_verified ? (
+            {sender?.is_verified === true && (
               <span className="badge badge-verified" style={{ fontSize: '0.65rem' }}>Verbatim Match</span>
-            ) : (
+            )}
+            {sender?.is_verified === false && (
               <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Unverified</span>
             )}
           </div>
@@ -142,11 +153,11 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
               <IndianRupee size={14} color="#f59e0b" />
               AMOUNT DUE / FINE
             </span>
-            {amount_due?.is_verified ? (
+            {amount_due?.value != null && (amount_due.is_verified ? (
               <span className="badge badge-verified" style={{ fontSize: '0.65rem' }}>Match</span>
             ) : (
               <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Check Paper Copy</span>
-            )}
+            ))}
           </div>
           <p style={{ fontSize: '1.4rem', fontWeight: '800', color: amount_due?.value ? '#f8fafc' : 'var(--text-dim)' }}>
             {amount_due?.value !== null && amount_due?.value !== undefined ? (
@@ -187,6 +198,22 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
         </div>
 
       </div>
+
+      {/* Paper-copy check banner (from the verification engine) */}
+      {needs_paper_check && (
+        <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.3)', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.85rem', color: '#fbbf24', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} /> Please check the amount and date on your paper copy.
+          </p>
+          {verification_messages.length > 0 && (
+            <ul style={{ paddingLeft: '1.4rem', marginTop: '0.35rem', fontSize: '0.8rem', color: '#fcd34d' }}>
+              {verification_messages.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Reference IDs Tag Grid */}
       {reference_ids.length > 0 && (
@@ -364,7 +391,7 @@ export default function FactVerificationCard({ verifiedFacts, processingTime, on
             marginTop: '0.5rem',
             maxHeight: '260px'
           }}>
-            {JSON.stringify(verifiedFacts, null, 2)}
+            {JSON.stringify(verifiedFacts.raw ?? verifiedFacts, null, 2)}
           </pre>
         )}
       </div>

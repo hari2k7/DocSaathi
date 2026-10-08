@@ -3,15 +3,16 @@ import { Sparkles, Globe, Volume2, VolumeX, Copy, Check, Play, Pause, RefreshCw,
 import { streamExplanation } from '../services/api';
 
 const LANGUAGES = [
-  { code: 'Tamil', label: 'தமிழ் (Tamil)', speechLang: 'ta-IN' },
-  { code: 'English', label: 'English', speechLang: 'en-IN' },
-  { code: 'Hindi', label: 'हिंदी (Hindi)', speechLang: 'hi-IN' },
-  { code: 'Malayalam', label: 'മലയാളം (Malayalam)', speechLang: 'ml-IN' },
-  { code: 'Telugu', label: 'తెలుగు (Telugu)', speechLang: 'te-IN' },
-  { code: 'Kannada', label: 'கன்னட (Kannada)', speechLang: 'kn-IN' },
-  { code: 'Bengali', label: 'বাংলা (Bengali)', speechLang: 'bn-IN' },
-  { code: 'Marathi', label: 'मराठी (Marathi)', speechLang: 'mr-IN' },
-  { code: 'Gujarati', label: 'ગુજરાતી (Gujarati)', speechLang: 'gu-IN' }
+  // apiCode is the language code the backend expects (see backend/API.md)
+  { code: 'Tamil', apiCode: 'ta', label: 'தமிழ் (Tamil)', speechLang: 'ta-IN' },
+  { code: 'English', apiCode: 'en', label: 'English', speechLang: 'en-IN' },
+  { code: 'Hindi', apiCode: 'hi', label: 'हिंदी (Hindi)', speechLang: 'hi-IN' },
+  { code: 'Malayalam', apiCode: 'ml', label: 'മലയാളം (Malayalam)', speechLang: 'ml-IN' },
+  { code: 'Telugu', apiCode: 'te', label: 'తెలుగు (Telugu)', speechLang: 'te-IN' },
+  { code: 'Kannada', apiCode: 'kn', label: 'ಕನ್ನಡ (Kannada)', speechLang: 'kn-IN' },
+  { code: 'Bengali', apiCode: 'bn', label: 'বাংলা (Bengali)', speechLang: 'bn-IN' },
+  { code: 'Marathi', apiCode: 'mr', label: 'मराठी (Marathi)', speechLang: 'mr-IN' },
+  { code: 'Gujarati', apiCode: 'gu', label: 'ગુજરાતી (Gujarati)', speechLang: 'gu-IN' }
 ];
 
 const MODES = [
@@ -44,6 +45,7 @@ export default function ExplanationPanel({ verifiedFacts }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
   const voicesRef = useRef([]);
+  const abortRef = useRef(null);
   const [voiceNotice, setVoiceNotice] = useState(null);
 
   // Browsers load voices asynchronously, so keep the list updated
@@ -63,6 +65,8 @@ export default function ExplanationPanel({ verifiedFacts }) {
     if (!verifiedFacts) return;
     handleGenerateExplanation();
     return () => {
+      // Drop the stream of the previous language/mode so its text cannot mix into the new one
+      abortRef.current?.abort();
       if (synthRef.current) {
         synthRef.current.cancel();
       }
@@ -71,6 +75,9 @@ export default function ExplanationPanel({ verifiedFacts }) {
 
   const handleGenerateExplanation = async () => {
     if (!verifiedFacts) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     if (synthRef.current) synthRef.current.cancel();
     setIsSpeaking(false);
     setVoiceNotice(null);
@@ -79,10 +86,10 @@ export default function ExplanationPanel({ verifiedFacts }) {
     setStreamError(null);
     setIsStreaming(true);
 
+    const langObj = LANGUAGES.find((l) => l.code === selectedLang);
+
     await streamExplanation(
-      verifiedFacts,
-      selectedLang,
-      selectedMode,
+      { analysis: verifiedFacts, language: langObj.apiCode, mode: selectedMode, signal: controller.signal },
       (token) => {
         setStreamedText((prev) => prev + token);
       },

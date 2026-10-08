@@ -10,7 +10,19 @@ const SUGGESTED_QUESTIONS = [
   'What are the critical medical/doctor instructions?'
 ];
 
-export default function DocumentChat({ transcription }) {
+// The model ends grounded answers with a `SOURCE: "<quote>"` line. The backend checks that
+// quote against the document and reports it separately, so it is hidden from the answer text.
+function splitAnswer(text) {
+  const marker = text.match(/\n\s*SOURCE:[\s\S]*$/);
+  let answer = marker ? text.slice(0, marker.index) : text;
+  // hide a marker that is still streaming in ("\nSOU")
+  const partial = answer.match(/\n\s*(S|SO|SOU|SOUR|SOURC|SOURCE)$/);
+  if (partial) answer = answer.slice(0, partial.index);
+  return answer.trimEnd();
+}
+
+export default function DocumentChat({ analysis }) {
+  const transcription = analysis?.transcription;
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
@@ -22,6 +34,10 @@ export default function DocumentChat({ transcription }) {
   const [inputQuery, setInputQuery] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef(null);
+  const abortRef = useRef(null);
+
+  // Stop an in-flight answer when the chat is closed (e.g. a new document is analyzed)
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,6 +54,17 @@ export default function DocumentChat({ transcription }) {
     const userMsgId = Date.now().toString();
     const botMsgId = (Date.now() + 1).toString();
 
+    // Previous turns give the model context for follow-up questions
+    const history = messages
+      .filter((msg) => msg.id !== 'welcome' && !msg.isError && msg.text)
+      .map((msg) => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.sender === 'user' ? msg.text : splitAnswer(msg.text)
+      }));
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     // Append user message
     setMessages((prev) => [
       ...prev,
@@ -49,9 +76,7 @@ export default function DocumentChat({ transcription }) {
     setIsStreaming(true);
 
     await streamQA(
-      transcription,
-      query,
-      'English',
+      { analysis, question: query.trim(), language: 'en', history, signal: controller.signal },
       (token) => {
         setMessages((prev) =>
           prev.map((msg) =>
@@ -63,7 +88,7 @@ export default function DocumentChat({ transcription }) {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === botMsgId
-              ? { ...msg, text: `⚠️ Error processing request: ${err}`, streaming: false }
+              ? { ...msg, text: `⚠️ ${err}`, streaming: false, isError: true }
               : msg
           )
         );
@@ -74,6 +99,11 @@ export default function DocumentChat({ transcription }) {
           prev.map((msg) => (msg.id === botMsgId ? { ...msg, streaming: false } : msg))
         );
         setIsStreaming(false);
+      },
+      (source) => {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === botMsgId ? { ...msg, source } : msg))
+        );
       }
     );
   };
@@ -101,7 +131,7 @@ export default function DocumentChat({ transcription }) {
           <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: '700' }}>Pass 3: Grounded Document Q&amp;A</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-              Ask anything about this specific document with zero AI hallucinations.
+              Ask anything about this specific document. Answers come only from your document text, and quotes are checked against it.
             </p>
           </div>
         </div>
@@ -183,7 +213,18 @@ export default function DocumentChat({ transcription }) {
               whiteSpace: 'pre-wrap',
               border: msg.sender === 'bot' ? '1px solid var(--border-color)' : 'none'
             }}>
-              {msg.text}
+              {msg.sender === 'bot' ? splitAnswer(msg.text) : msg.text}
+              {msg.source?.quote && (
+                <div style={{
+                  marginTop: '0.55rem',
+                  fontSize: '0.75rem',
+                  color: msg.source.verified ? '#34d399' : '#fbbf24'
+                }}>
+                  {msg.source.verified
+                    ? `✓ Found in your document: “${msg.source.quote}”`
+                    : '⚠️ The quoted source could not be found in your document. Please check the paper copy.'}
+                </div>
+              )}
               {msg.streaming && (
                 <span style={{
                   display: 'inline-block',

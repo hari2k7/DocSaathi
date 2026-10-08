@@ -2,8 +2,13 @@ import React from 'react';
 import { ShieldCheck, Cpu, RefreshCw, Sparkles, AlertTriangle, CheckCircle2, FileText } from 'lucide-react';
 
 export default function Header({ health, onRefreshHealth, isWarming, onWarmup }) {
-  const isOnline = health?.status === 'ok';
-  const ollamaOk = health?.ollama?.status === 'ok';
+  const ollamaStatus = health?.ollama?.status;
+  const ollamaOk = ollamaStatus === 'ok';
+  const statusLabel = ollamaOk
+    ? 'Ollama Vision Ready'
+    : ollamaStatus === 'model_missing'
+      ? 'Model Not Installed'
+      : 'Ollama Offline / Standby';
   const modelName = health?.ollama?.configuredModel || 'gemma4:latest';
 
   return (
@@ -61,7 +66,7 @@ export default function Header({ health, onRefreshHealth, isWarming, onWarmup })
                 <AlertTriangle size={16} color="#fbbf24" />
               )}
               <span style={{ fontSize: '0.825rem', fontWeight: '600', color: ollamaOk ? '#34d399' : '#fbbf24' }}>
-                {ollamaOk ? 'Ollama Vision Ready' : 'Ollama Offline / Standby'}
+                {statusLabel}
               </span>
             </div>
 

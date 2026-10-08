@@ -7,7 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        // 127.0.0.1 (not localhost): the backend listens on IPv4 only. Port matches PORT in backend/.env (default 3001)
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       },
     },
