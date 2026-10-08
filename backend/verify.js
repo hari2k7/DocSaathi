@@ -35,6 +35,33 @@ function locate(transcription, sourceText) {
   return { start, end };
 }
 
+function parseISODate(str) {
+  if (typeof str !== 'string') return null;
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const y = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const d = parseInt(match[3], 10);
+
+  if (m < 1 || m > 12) return null;
+  if (d < 1 || d > 31) return null;
+
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
+    return null;
+  }
+  return date;
+}
+
+function daysLeft(date, now = new Date()) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+  const nowMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const targetMidnight = date.getTime();
+  return Math.round((targetMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
+}
+
 module.exports = {
-  locate
+  locate,
+  parseISODate,
+  daysLeft
 };
