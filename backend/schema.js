@@ -91,4 +91,26 @@ const analyzeSchema = {
   ]
 };
 
-module.exports = { analyzeSchema };
+const scamSchema = {
+  type: 'object',
+  properties: {
+    verdict: {
+      type: 'string',
+      enum: ['likely_genuine', 'suspicious', 'likely_scam']
+    },
+    reasons: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          reason: { type: 'string' },
+          source_text: { type: 'string' }
+        },
+        required: ['reason', 'source_text']
+      }
+    }
+  },
+  required: ['verdict', 'reasons']
+};
+
+module.exports = { analyzeSchema, scamSchema };
