@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { locate, parseISODate, daysLeft, verifyAmount, verifyDueDate } = require('../verify.js');
+const { locate, parseISODate, daysLeft, verifyAmount, verifyDueDate, verifyFacts } = require('../verify.js');
 
 test('locate()', async (t) => {
   await t.test('exact match', () => {
@@ -127,5 +127,51 @@ test('verifyDueDate()', async (t) => {
   await t.test('null', () => {
     const res = verifyDueDate(null, 'text', now);
     assert.deepStrictEqual(res, { issues: [], days_left: null, status: null });
+  });
+});
+
+test('verifyFacts()', async (t) => {
+  const now = new Date('2026-10-08T15:00:00Z');
+  
+  await t.test('clean facts', () => {
+    const facts = {
+      transcription: "Total 1500 Due 2026-10-10 Warning: pay now Penalty: fees",
+      amount_due: { value: 1500, source_text: "1500" },
+      due_date: { value: "2026-10-10", source_text: "2026-10-10" },
+      required_actions: [{ action: "pay", source_text: "pay now" }],
+      penalties: [{ description: "late fee", source_text: "fees" }],
+      unclear_parts: [],
+      confidence: 0.9
+    };
+    const res = verifyFacts(facts, now);
+    assert.strictEqual(res.needs_paper_check, false);
+    assert.strictEqual(res.issues.length, 0);
+  });
+
+  await t.test('needs_paper_check triggers', () => {
+    // Has issues
+    const factsIssues = {
+      transcription: "Total 1500",
+      amount_due: { value: 1500, source_text: "1600" },
+      confidence: 0.9
+    };
+    assert.strictEqual(verifyFacts(factsIssues, now).needs_paper_check, true);
+
+    // Low confidence
+    const factsConf = {
+      transcription: "Total 1500",
+      amount_due: { value: 1500, source_text: "1500" },
+      confidence: 0.6
+    };
+    assert.strictEqual(verifyFacts(factsConf, now).needs_paper_check, true);
+
+    // Unclear parts
+    const factsUnclear = {
+      transcription: "Total 1500",
+      amount_due: { value: 1500, source_text: "1500" },
+      unclear_parts: ["some smudge"],
+      confidence: 0.9
+    };
+    assert.strictEqual(verifyFacts(factsUnclear, now).needs_paper_check, true);
   });
 });

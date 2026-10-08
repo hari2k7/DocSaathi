@@ -138,10 +138,71 @@ function verifyDueDate(due, transcription, now = new Date()) {
   return result;
 }
 
+const ISSUE_MESSAGES = {
+  amount_implausible: "The amount is unusual or invalid.",
+  amount_source_not_found: "The exact text for the amount could not be located in the document.",
+  amount_not_in_source: "The extracted amount does not match its source text.",
+  date_invalid: "The due date is invalid.",
+  date_implausible: "The due date is too far in the past or future.",
+  date_source_not_found: "The exact text for the date could not be located in the document.",
+  date_year_not_in_source: "The year in the due date does not match its source text.",
+  action_source_not_found: "The exact text for an action could not be located in the document.",
+  penalty_source_not_found: "The exact text for a penalty could not be located in the document."
+};
+
+function verifyFacts(facts, now = new Date()) {
+  const result = {
+    due_date: null,
+    issues: [],
+    messages: [],
+    needs_paper_check: false
+  };
+
+  if (!facts) return result;
+
+  const transcription = facts.transcription || '';
+
+  const amountIssues = verifyAmount(facts.amount_due, transcription);
+  result.issues.push(...amountIssues);
+
+  const dueInfo = verifyDueDate(facts.due_date, transcription, now);
+  result.due_date = dueInfo;
+  result.issues.push(...dueInfo.issues);
+
+  if (Array.isArray(facts.required_actions)) {
+    for (const act of facts.required_actions) {
+      if (!locate(transcription, act.source_text)) {
+        result.issues.push('action_source_not_found');
+      }
+    }
+  }
+
+  if (Array.isArray(facts.penalties)) {
+    for (const pen of facts.penalties) {
+      if (!locate(transcription, pen.source_text)) {
+        result.issues.push('penalty_source_not_found');
+      }
+    }
+  }
+
+  result.issues = [...new Set(result.issues)];
+  result.messages = result.issues.map(code => ISSUE_MESSAGES[code]);
+
+  const hasIssues = result.issues.length > 0;
+  const lowConfidence = (typeof facts.confidence === 'number' && facts.confidence < 0.7);
+  const hasUnclear = (Array.isArray(facts.unclear_parts) && facts.unclear_parts.length > 0);
+
+  result.needs_paper_check = hasIssues || lowConfidence || hasUnclear;
+
+  return result;
+}
+
 module.exports = {
   locate,
   parseISODate,
   daysLeft,
   verifyAmount,
-  verifyDueDate
+  verifyDueDate,
+  verifyFacts,
+  ISSUE_MESSAGES
 };
