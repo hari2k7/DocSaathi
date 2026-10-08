@@ -1,6 +1,6 @@
 # DocSaathi Backend
 
-The backend of DocSaathi provides a local, private API for reading and analyzing English documents (like bills, notices, and agreements) and returning extracted facts in Tamil, Hindi, or plain English. It is powered by a local Ollama model. The backend is designed with privacy and strict fact verification at its core: the model handles language extraction, while deterministic code verifies dates, amounts, and statuses.
+The backend of DocSaathi provides a local, private API for reading and analyzing English documents (like bills, notices, and agreements) and returning extracted facts and explanations in plain English, Tamil, Hindi, Malayalam, Telugu, Kannada, Bengali, Marathi or Gujarati. It is powered by a local Ollama model. The backend is designed with privacy and strict fact verification at its core: the model handles language extraction, while deterministic code verifies dates, amounts, and statuses.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ npm test
 
 ## Folder Layout
 
-- `/routes`: Express route handlers (`analyze.js`, `reminder.js`).
+- `/routes`: Express route handlers (`analyze.js`, `explain.js`, `ask.js`, `safety.js`, `reminder.js`).
 - `/scripts`: Developer tools, including `analyze-file.js` to test extraction.
 - `/tests`: Unit tests for verification and routes.
 - `config.js`: Configuration loader with validation.
@@ -54,6 +54,9 @@ npm test
 - `prompts.js`: The system prompts passed to the model.
 - `schema.js`: JSON schema defining the extraction structure.
 - `server.js`: The main Express application.
+- `sse.js`: Server-Sent Events helper used by the streaming routes.
+- `safety.js`: Rule-based PII detection and scam signals.
+- `ics.js`: iCalendar (`.ics`) builder for reminders.
 - `verify.js`: The deterministic fact verification engine.
 
 ## Dev Script
@@ -75,7 +78,7 @@ DocSaathi strictly separates responsibilities to ensure privacy, reliability, an
 - **Reading Aid, Not Advice**: The application serves as a reading aid. It does not provide legal, financial, or medical advice.
 - **Single Page Processing**: Only the first page of an uploaded PDF or image is processed.
 - **Scam Check**: The scam detection is a helpful signal but not a definitive guarantee.
-- **Language Quality**: Tamil and Hindi explanation qualities rely entirely on the model's native capabilities; quality is not formally guaranteed or claimed without prior measurements.
+- **Language Quality**: Regional-language explanation quality rely entirely on the model's native capabilities; quality is not formally guaranteed or claimed without prior measurements.
 
 ## Demo Checklist
 
