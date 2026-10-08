@@ -90,9 +90,58 @@ function verifyAmount(amount, transcription) {
   return issues;
 }
 
+function verifyDueDate(due, transcription, now = new Date()) {
+  const result = {
+    issues: [],
+    days_left: null,
+    status: null
+  };
+
+  if (!due || due.value === null || due.value === undefined) {
+    return result;
+  }
+
+  const d = parseISODate(due.value);
+  if (!d) {
+    result.issues.push('date_invalid');
+    return result;
+  }
+
+  const dl = daysLeft(d, now);
+  result.days_left = dl;
+
+  if (dl > 0) result.status = 'upcoming';
+  else if (dl === 0) result.status = 'due_today';
+  else result.status = 'overdue';
+
+  const yNow = now.getUTCFullYear();
+  const yDate = d.getUTCFullYear();
+  if (yDate < yNow - 5 || yDate > yNow + 2) {
+    result.issues.push('date_implausible');
+  }
+
+  if (!due.source_text) {
+    result.issues.push('date_source_not_found');
+    return result;
+  }
+
+  const loc = locate(transcription, due.source_text);
+  if (!loc) {
+    result.issues.push('date_source_not_found');
+  }
+
+  const twoDigit = String(yDate).slice(-2);
+  if (!due.source_text.includes(twoDigit)) {
+    result.issues.push('date_year_not_in_source');
+  }
+
+  return result;
+}
+
 module.exports = {
   locate,
   parseISODate,
   daysLeft,
-  verifyAmount
+  verifyAmount,
+  verifyDueDate
 };

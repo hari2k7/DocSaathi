@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { locate, parseISODate, daysLeft, verifyAmount } = require('../verify.js');
+const { locate, parseISODate, daysLeft, verifyAmount, verifyDueDate } = require('../verify.js');
 
 test('locate()', async (t) => {
   await t.test('exact match', () => {
@@ -93,5 +93,39 @@ test('verifyAmount()', async (t) => {
   await t.test('null amount', () => {
     assert.deepStrictEqual(verifyAmount(null, 'text'), []);
     assert.deepStrictEqual(verifyAmount({ value: null, source_text: '' }, 'text'), []);
+  });
+});
+
+test('verifyDueDate()', async (t) => {
+  const now = new Date('2026-10-08T15:00:00Z');
+  
+  await t.test('upcoming', () => {
+    const res = verifyDueDate({ value: '2026-10-10', source_text: '10/10/26' }, 'Due on 10/10/26', now);
+    assert.deepStrictEqual(res, { issues: [], days_left: 2, status: 'upcoming' });
+  });
+
+  await t.test('today', () => {
+    const res = verifyDueDate({ value: '2026-10-08', source_text: '08-Oct-2026' }, 'Due 08-Oct-2026', now);
+    assert.deepStrictEqual(res, { issues: [], days_left: 0, status: 'due_today' });
+  });
+
+  await t.test('overdue', () => {
+    const res = verifyDueDate({ value: '2026-10-01', source_text: '1st Oct 26' }, 'Paid by 1st Oct 26', now);
+    assert.deepStrictEqual(res, { issues: [], days_left: -7, status: 'overdue' });
+  });
+
+  await t.test('implausible year', () => {
+    const res = verifyDueDate({ value: '2020-01-01', source_text: 'Jan 1 2020' }, 'Jan 1 2020', now);
+    assert.deepStrictEqual(res, { issues: ['date_implausible'], days_left: -2472, status: 'overdue' });
+  });
+
+  await t.test('invalid', () => {
+    const res = verifyDueDate({ value: '2026-13-01', source_text: 'foo' }, 'foo', now);
+    assert.deepStrictEqual(res, { issues: ['date_invalid'], days_left: null, status: null });
+  });
+
+  await t.test('null', () => {
+    const res = verifyDueDate(null, 'text', now);
+    assert.deepStrictEqual(res, { issues: [], days_left: null, status: null });
   });
 });
