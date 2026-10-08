@@ -20,6 +20,18 @@ const MODES = [
   { id: 'translate', label: 'Translate', desc: 'Verbatim text translation' }
 ];
 
+const normalizeLang = (lang) => (lang || '').toLowerCase().replace('_', '-');
+
+// Pick an installed voice for the language. Setting utterance.lang alone is only a
+// hint: browsers fall back to their default (English/Hindi) voice, so we choose explicitly.
+const findVoiceForLang = (voices, speechLang) => {
+  const target = normalizeLang(speechLang);
+  const base = target.split('-')[0];
+  const exact = voices.filter((v) => normalizeLang(v.lang) === target);
+  const sameLanguage = voices.filter((v) => normalizeLang(v.lang).split('-')[0] === base);
+  return exact[0] || sameLanguage[0] || null;
+};
+
 export default function ExplanationPanel({ verifiedFacts }) {
   const [selectedLang, setSelectedLang] = useState('Tamil');
   const [selectedMode, setSelectedMode] = useState('explain');
@@ -31,6 +43,20 @@ export default function ExplanationPanel({ verifiedFacts }) {
   // Audio Speech Synthesis state
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
+  const voicesRef = useRef([]);
+  const [voiceNotice, setVoiceNotice] = useState(null);
+
+  // Browsers load voices asynchronously, so keep the list updated
+  useEffect(() => {
+    const synth = synthRef.current;
+    if (!synth) return;
+    const loadVoices = () => {
+      voicesRef.current = synth.getVoices();
+    };
+    loadVoices();
+    synth.addEventListener('voiceschanged', loadVoices);
+    return () => synth.removeEventListener('voiceschanged', loadVoices);
+  }, []);
 
   // Auto trigger stream when facts, lang, or mode change
   useEffect(() => {
@@ -47,6 +73,7 @@ export default function ExplanationPanel({ verifiedFacts }) {
     if (!verifiedFacts) return;
     if (synthRef.current) synthRef.current.cancel();
     setIsSpeaking(false);
+    setVoiceNotice(null);
 
     setStreamedText('');
     setStreamError(null);
@@ -98,11 +125,23 @@ export default function ExplanationPanel({ verifiedFacts }) {
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
-    // Find matching voice for selected language if available
     const langObj = LANGUAGES.find(l => l.code === selectedLang);
     const targetCode = langObj ? langObj.speechLang : 'en-IN';
-    
-    utterance.lang = targetCode;
+
+    const voices = synthRef.current.getVoices();
+    const voice = findVoiceForLang(voices.length ? voices : voicesRef.current, targetCode);
+
+    if (!voice) {
+      setVoiceNotice(
+        `No ${selectedLang} voice is installed on this browser/device, so the audio can't be read in ${selectedLang}. ` +
+        `Try Microsoft Edge, or install the ${selectedLang} voice in your system speech settings.`
+      );
+      return;
+    }
+
+    setVoiceNotice(null);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
     utterance.rate = 0.92;
 
     utterance.onend = () => setIsSpeaking(false);
@@ -278,6 +317,12 @@ export default function ExplanationPanel({ verifiedFacts }) {
               <span>{copied ? 'Copied!' : 'Copy Text'}</span>
             </button>
 
+          </div>
+        )}
+
+        {voiceNotice && (
+          <div style={{ color: '#fbbf24', fontSize: '0.85rem', marginTop: '0.75rem' }}>
+            ⚠️ {voiceNotice}
           </div>
         )}
 
