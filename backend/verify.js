@@ -197,6 +197,15 @@ function verifyFacts(facts, now = new Date()) {
   return result;
 }
 
+function extractSourceQuote(fullText) {
+  if (!fullText) return { answer: '', quote: null };
+  const match = fullText.match(/^(.*)\nSOURCE:\s*["“”](.*?)["“”]\s*$/s);
+  if (match) {
+    return { answer: match[1].trim(), quote: match[2].trim() };
+  }
+  return { answer: fullText.trim(), quote: null };
+}
+
 module.exports = {
   locate,
   parseISODate,
@@ -204,5 +213,6 @@ module.exports = {
   verifyAmount,
   verifyDueDate,
   verifyFacts,
+  extractSourceQuote,
   ISSUE_MESSAGES
 };
