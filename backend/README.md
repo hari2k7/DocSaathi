@@ -63,3 +63,25 @@ You can test the extraction pipeline locally on an image without using the front
 ```powershell
 node scripts/analyze-file.js <path-to-image>
 ```
+
+## Gemma Usage (Model vs Code)
+
+DocSaathi strictly separates responsibilities to ensure privacy, reliability, and honesty:
+- **Model Jobs**: Gemma 2 handles language reading, extracting key facts from the image, generating explanations, and answering follow-up questions directly from the document.
+- **Code Jobs**: Deterministic code handles fact verification. It computes days left, verifies dates, verifies amounts, and checks if the model's extracted text exactly matches the original transcription.
+
+## Known Limitations
+
+- **Reading Aid, Not Advice**: The application serves as a reading aid. It does not provide legal, financial, or medical advice.
+- **Single Page Processing**: Only the first page of an uploaded PDF or image is processed.
+- **Scam Check**: The scam detection is a helpful signal but not a definitive guarantee.
+- **Language Quality**: Tamil and Hindi explanation qualities rely entirely on the model's native capabilities; quality is not formally guaranteed or claimed without prior measurements.
+
+## Demo Checklist
+
+- [ ] Ensure Ollama is running and `gemma2:2b` is pulled.
+- [ ] Run `npm start` and verify `GET /api/health` returns `modelReady: true`.
+- [ ] Use `scripts/analyze-file.js` to ensure the extraction pipeline works.
+- [ ] Upload an electricity bill or tax notice image via the frontend.
+- [ ] Validate that the amounts and dates are highlighted correctly.
+- [ ] Ask a follow-up question in a supported language.
