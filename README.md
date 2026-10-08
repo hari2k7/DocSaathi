@@ -147,7 +147,7 @@ After running locally you can: upload a sample document from `samples/` (fake da
 
 ## Demo Video
 
-**Demo Video:** [Video URL]
+**Demo Video:** https://youtu.be/DSR56KTL60A
 
 The video shows: the problem, turning Wi-Fi off, uploading a fake electricity bill, facts with days left, checking the amount against its source, switching between Tamil, Hindi and English, asking an answerable question and an unanswerable one ("This document does not say"), a scam notice, and Aadhaar redaction. [Edit to match what the video really shows.]
 
