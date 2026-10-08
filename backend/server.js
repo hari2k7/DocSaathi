@@ -5,6 +5,9 @@ const { health, warmUp } = require('./ollama');
 
 const app = express();
 const analyzeRoute = require('./routes/analyze');
+const explainRoute = require('./routes/explain');
+const askRoute = require('./routes/ask');
+const safetyRoute = require('./routes/safety');
 const reminderRoute = require('./routes/reminder');
 
 app.use(cors({
@@ -15,6 +18,9 @@ app.use(express.json({ limit: '11mb' }));
 app.use(express.urlencoded({ limit: '11mb', extended: true }));
 
 app.use('/api/analyze', analyzeRoute);
+app.use('/api/explain', explainRoute);
+app.use('/api/ask', askRoute);
+app.use('/api', safetyRoute); // Mounts /api/redact and /api/scam-check
 app.use('/api/reminder', reminderRoute);
 
 app.get('/api/health', async (req, res, next) => {
