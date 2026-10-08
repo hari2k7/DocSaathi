@@ -60,8 +60,39 @@ function daysLeft(date, now = new Date()) {
   return Math.round((targetMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
 }
 
+function verifyAmount(amount, transcription) {
+  const issues = [];
+  if (!amount || amount.value === null || amount.value === undefined) {
+    return issues;
+  }
+  
+  const val = amount.value;
+  if (!Number.isFinite(val) || val < 0 || val >= 1e9) {
+    issues.push('amount_implausible');
+  }
+
+  if (!amount.source_text) {
+    issues.push('amount_source_not_found');
+    return issues;
+  }
+
+  const loc = locate(transcription, amount.source_text);
+  if (!loc) {
+    issues.push('amount_source_not_found');
+  }
+
+  const intPart = String(Math.trunc(val));
+  const cleanSource = amount.source_text.replace(/[\s,]/g, '');
+  if (!cleanSource.includes(intPart)) {
+    issues.push('amount_not_in_source');
+  }
+
+  return issues;
+}
+
 module.exports = {
   locate,
   parseISODate,
-  daysLeft
+  daysLeft,
+  verifyAmount
 };

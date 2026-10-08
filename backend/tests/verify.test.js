@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { locate, parseISODate, daysLeft } = require('../verify.js');
+const { locate, parseISODate, daysLeft, verifyAmount } = require('../verify.js');
 
 test('locate()', async (t) => {
   await t.test('exact match', () => {
@@ -70,5 +70,28 @@ test('daysLeft()', async (t) => {
     const d = parseISODate('2027-01-01');
     const endOfYear = new Date('2026-12-31T23:59:59Z');
     assert.strictEqual(daysLeft(d, endOfYear), 1);
+  });
+});
+
+test('verifyAmount()', async (t) => {
+  await t.test('good amount', () => {
+    assert.deepStrictEqual(verifyAmount({ value: 1500, source_text: '1500' }, 'Total: 1500'), []);
+  });
+
+  await t.test('comma formats', () => {
+    assert.deepStrictEqual(verifyAmount({ value: 184000, source_text: 'Rs 1,84,000.00' }, 'Pay Rs 1,84,000.00 now'), []);
+  });
+
+  await t.test('mismatch', () => {
+    assert.deepStrictEqual(verifyAmount({ value: 1500, source_text: '1600' }, 'Total: 1600'), ['amount_not_in_source']);
+  });
+
+  await t.test('missing quote', () => {
+    assert.deepStrictEqual(verifyAmount({ value: 1500, source_text: '1500' }, 'Total is 1600'), ['amount_source_not_found']);
+  });
+
+  await t.test('null amount', () => {
+    assert.deepStrictEqual(verifyAmount(null, 'text'), []);
+    assert.deepStrictEqual(verifyAmount({ value: null, source_text: '' }, 'text'), []);
   });
 });
