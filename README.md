@@ -239,26 +239,6 @@ Open the address Vite prints (usually http://localhost:5173). To run the backend
 
 Tip for demos: run a sample document twice before presenting so the model is warm, and use fake data only.
 
-## Devpost Submission
-
-**Devpost Project:** [Devpost Project URL]
-
-## Evaluation
-
-[Fill from your own testing on the fake sample set. Report real numbers, including failures. Delete this section if you did not measure.]
-
-| Measure | Result |
-| --- | --- |
-| Sample documents tested | [N] |
-| Document type correct | [x / N] |
-| Amount correct | [x / N] |
-| Due date correct | [x / N] |
-| Source quotes located in transcription | [x / N] |
-| Time per document (cold / warm) | [s / s] |
-| Model and hardware | [gemma4 tag, laptop specs] |
-
-Backend unit tests: 69 passing at the last run (`cd backend && npm test`).
-
 ## Limitations
 
 - Accuracy depends on photo quality and the model; DocSaathi is a reading aid, not legal or financial advice. Serious matters should be confirmed with a bank, CSC or lawyer.
@@ -289,24 +269,24 @@ MIT License. See [LICENSE](LICENSE). Gemma 4 is used under its own licence: [lin
 
 ## Submission Checklist
 
-- [ ] Project title and description added
-- [ ] All team members listed
-- [ ] Problem clearly explained
-- [ ] Reason for choosing the problem explained
-- [ ] Solution and key features documented
-- [ ] Innovation and differentiation explained
-- [ ] Architecture included
-- [ ] Technical implementation documented
-- [ ] Work completed during the hackathon documented
-- [ ] Team contributions documented
+- [x] Project title and description added
+- [x] All team members listed
+- [x] Problem clearly explained
+- [x] Reason for choosing the problem explained
+- [x] Solution and key features documented
+- [x] Innovation and differentiation explained
+- [x] Architecture included
+- [x] Technical implementation documented
+- [x] Work completed during the hackathon documented
+- [x] Team contributions documented
 - [ ] Working application is functional
-- [ ] Live application link added where applicable
+- [x] Live application link added where applicable (N/A: local-only by design, explained in the README)
 - [ ] Demo video added
-- [ ] AI and open-source components documented
+- [x] AI and open-source components documented
 - [ ] Setup and usage instructions tested
 - [ ] Challenges and learnings documented
 - [ ] Devpost submission completed
 - [ ] Devpost link added
-- [ ] Credits added
-- [ ] License added
+- [x] Credits added
+- [x] License added
 - [ ] Repository is organized and complete
