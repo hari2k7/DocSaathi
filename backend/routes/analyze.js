@@ -43,7 +43,7 @@ async function tryOllamaAnalyze(base64Image, useFormat) {
     messages[0].content += '\n\nRESPOND ONLY WITH VALID JSON adhering to the specified structure.';
   }
   
-  const content = await chat({ messages, format });
+  const content = await chat({ messages, format, timeoutMs: 180000 });
   if (!content) throw new Error('Empty response from model');
   return parseModelJson(content);
 }

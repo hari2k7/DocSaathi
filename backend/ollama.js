@@ -8,7 +8,7 @@ class OllamaError extends Error {
   }
 }
 
-async function chat({ messages, format, options, signal }) {
+async function chat({ messages, format, options, timeoutMs = 120000 }) {
   const payload = {
     model: config.model,
     stream: false,
@@ -22,6 +22,8 @@ async function chat({ messages, format, options, signal }) {
   if (format) {
     payload.format = format;
   }
+
+  const signal = AbortSignal.timeout(timeoutMs);
 
   try {
     const res = await fetch(`${config.ollamaHost}/api/chat`, {
@@ -38,12 +40,15 @@ async function chat({ messages, format, options, signal }) {
     const data = await res.json();
     return data.message?.content || '';
   } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      throw new OllamaError('ollama_timeout', 'Ollama request timed out', 504);
+    }
     if (err instanceof OllamaError) throw err;
     throw new OllamaError('ollama_unreachable', `Could not connect to Ollama: ${err.message}`, 503);
   }
 }
 
-async function* chatStream({ messages, options, signal }) {
+async function* chatStream({ messages, options, timeoutMs = 120000 }) {
   const payload = {
     model: config.model,
     stream: true,
@@ -54,6 +59,8 @@ async function* chatStream({ messages, options, signal }) {
       ...options
     }
   };
+
+  const signal = AbortSignal.timeout(timeoutMs);
 
   try {
     const res = await fetch(`${config.ollamaHost}/api/chat`, {
@@ -104,6 +111,9 @@ async function* chatStream({ messages, options, signal }) {
       } catch (e) {}
     }
   } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      throw new OllamaError('ollama_timeout', 'Ollama request timed out', 504);
+    }
     if (err instanceof OllamaError) throw err;
     throw new OllamaError('ollama_unreachable', `Could not connect to Ollama: ${err.message}`, 503);
   }
