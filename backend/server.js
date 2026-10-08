@@ -45,8 +45,12 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: code });
 });
 
-app.listen(config.port, '127.0.0.1', () => {
-  console.log(`Server listening on http://127.0.0.1:${config.port}`);
-  console.log(`Model: ${config.model}`);
-  warmUp();
-});
+if (require.main === module) {
+  app.listen(config.port, '127.0.0.1', () => {
+    console.log(`Server listening on http://127.0.0.1:${config.port}`);
+    console.log(`Model: ${config.model}`);
+    warmUp();
+  });
+}
+
+module.exports = app;
