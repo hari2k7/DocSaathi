@@ -14,9 +14,9 @@ Checks the health of the local Ollama instance and verifies the selected model i
 ```json
 {
   "ollama": true,
-  "model": "gemma2:2b",
+  "model": "<MODEL>",
   "modelReady": true,
-  "installed": ["gemma2:2b", "gemma2:latest"]
+  "installed": ["<MODEL>"]
 }
 ```
 
@@ -64,7 +64,8 @@ Analyzes a document image, transcribes it, extracts key facts, and runs determin
     "issues": [],
     "messages": [],
     "needs_paper_check": false
-  }
+  },
+  "transcription": "BILL DETAILS\nTotal: 1500\nDue: Oct 15"
 }
 ```
 
@@ -81,79 +82,9 @@ $body = @{ image = "base64..." } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://127.0.0.1:3001/api/analyze" -Method Post -ContentType "application/json" -Body $body
 ```
 
----
 
-## 3. POST /api/explain
 
-Streams an explanation of the document facts in the requested language via Server-Sent Events (SSE).
-
-**Request Body:**
-```json
-{
-  "facts": { "doc_type": "electricity_bill", "amount_due": { "value": 1500, "source_text": "1500" } },
-  "language": "hi",
-  "mode": "summary"
-}
-```
-
-**Response (200 OK, `text/event-stream`):**
-The stream yields chunk events containing tokens, and terminates with `[DONE]`.
-
-**SSE Event Shapes:**
-```text
-data: {"token": " Your"}
-
-data: {"token": " bill"}
-
-data: {"error": "ollama_timeout"}
-
-data: [DONE]
-```
-
-**PowerShell Example:**
-```powershell
-$body = @{ facts = @{}; language = "ta"; mode = "summary" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://127.0.0.1:3001/api/explain" -Method Post -ContentType "application/json" -Body $body
-```
-
----
-
-## 4. POST /api/ask
-
-Streams an answer to a user's follow-up question grounded ONLY in the transcription, via Server-Sent Events (SSE).
-
-**Request Body:**
-```json
-{
-  "transcription": "BILL DETAILS\nTotal: 1500\nDue: Oct 15",
-  "question": "What is the total?",
-  "language": "en"
-}
-```
-
-**Response (200 OK, `text/event-stream`):**
-The stream yields chunk events containing tokens, and terminates with `[DONE]`.
-
-**SSE Event Shapes:**
-```text
-data: {"token": " The"}
-
-data: {"token": " total"}
-
-data: {"error": "ollama_unreachable"}
-
-data: [DONE]
-```
-
-**PowerShell Example:**
-```powershell
-$body = @{ transcription = "Bill details"; question = "Total?"; language = "en" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://127.0.0.1:3001/api/ask" -Method Post -ContentType "application/json" -Body $body
-```
-
----
-
-## 5. POST /api/reminder
+## 3. POST /api/reminder
 
 Generates and downloads an iCalendar (.ics) file with an all-day event for the given due date, complete with standard reminder alarms.
 

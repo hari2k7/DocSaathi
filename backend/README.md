@@ -13,14 +13,14 @@ The backend relies on the following environment variables (defined in a `.env` f
 
 - `PORT`: Port the server runs on (default: `3001`).
 - `OLLAMA_HOST`: Local Ollama API URL (default: `http://127.0.0.1:11434`). Must be localhost or 127.0.0.1.
-- `MODEL`: The Ollama model to use (default: `gemma2:2b`).
+- `MODEL`: The Ollama model to use (default: whatever `.env.example` sets).
 
 ## How to Pull the Model
 
 Before starting, ensure you have pulled the required model in Ollama:
 
 ```powershell
-ollama pull gemma2:2b
+ollama pull <MODEL>
 ```
 
 ## Run
@@ -67,7 +67,7 @@ node scripts/analyze-file.js <path-to-image>
 ## Gemma Usage (Model vs Code)
 
 DocSaathi strictly separates responsibilities to ensure privacy, reliability, and honesty:
-- **Model Jobs**: Gemma 2 handles language reading, extracting key facts from the image, generating explanations, and answering follow-up questions directly from the document.
+- **Model Jobs**: The specified model handles language reading, extracting key facts from the image, generating explanations, and answering follow-up questions directly from the document.
 - **Code Jobs**: Deterministic code handles fact verification. It computes days left, verifies dates, verifies amounts, and checks if the model's extracted text exactly matches the original transcription.
 
 ## Known Limitations
@@ -79,7 +79,7 @@ DocSaathi strictly separates responsibilities to ensure privacy, reliability, an
 
 ## Demo Checklist
 
-- [ ] Ensure Ollama is running and `gemma2:2b` is pulled.
+- [ ] Ensure Ollama is running and the required model is pulled.
 - [ ] Run `npm start` and verify `GET /api/health` returns `modelReady: true`.
 - [ ] Use `scripts/analyze-file.js` to ensure the extraction pipeline works.
 - [ ] Upload an electricity bill or tax notice image via the frontend.
