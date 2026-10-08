@@ -3,6 +3,7 @@ const cors = require('cors');
 const { config } = require('./config');
 const { health, warmUp } = require('./ollama');
 
+// Port configured via .env (default 3001)
 const app = express();
 const analyzeRoute = require('./routes/analyze');
 const explainRoute = require('./routes/explain');
