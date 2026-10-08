@@ -3,6 +3,7 @@ const { chat, OllamaError } = require('../ollama');
 const { config } = require('../config');
 const { analyzeSchema } = require('../schema');
 const { ANALYZE_SYSTEM } = require('../prompts');
+const { verifyFacts } = require('../verify');
 
 const router = express.Router();
 
@@ -82,11 +83,9 @@ router.post('/', async (req, res, next) => {
       }
     }
 
-    const transcription = parsedResult.transcription || '';
-    const facts = { ...parsedResult };
-    delete facts.transcription;
-
-    res.json({ facts, transcription });
+    const facts = parsedResult;
+    const verification = verifyFacts(facts);
+    res.json({ facts, verification });
   } catch (err) {
     next(err);
   }
