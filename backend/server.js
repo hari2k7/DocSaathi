@@ -4,6 +4,7 @@ const { config } = require('./config');
 const { health, warmUp } = require('./ollama');
 
 const app = express();
+const analyzeRoute = require('./routes/analyze');
 
 app.use(cors({
   origin: [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
@@ -11,6 +12,8 @@ app.use(cors({
 
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
+
+app.use('/api/analyze', analyzeRoute);
 
 app.get('/api/health', async (req, res, next) => {
   try {
