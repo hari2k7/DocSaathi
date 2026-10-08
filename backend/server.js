@@ -41,7 +41,7 @@ app.use((err, req, res, next) => {
   const code = err.code || 'internal_error';
   const status = err.status || 500;
   // Log message only, no stack traces
-  console.error(`[Error] ${code}: ${err.message}`);
+  console.error(`[Error] ${code}`);
   res.status(status).json({ error: code });
 });
 
